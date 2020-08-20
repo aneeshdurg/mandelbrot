@@ -105,7 +105,8 @@ const bufferArrays = {
 };
 
 var gl = null;
-async function main(canvas, root) {
+async function main(canvas, root, fps) {
+    fps = fps || 30;
     root = root || ".";
 
     await loadTwgl();
@@ -143,7 +144,6 @@ async function main(canvas, root) {
     }
 
     let lastRender = 0;
-    const fps = 30;
     const mspf = 1000/fps;
 
     let max_steps = 100;
