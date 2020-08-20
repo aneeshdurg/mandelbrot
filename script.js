@@ -105,7 +105,9 @@ const bufferArrays = {
 };
 
 var gl = null;
-async function main(canvas, btn) {
+async function main(canvas, root) {
+    root = root || ".";
+
     await loadTwgl();
 
     const dimensions = [1000, 1000];
@@ -117,7 +119,6 @@ async function main(canvas, btn) {
         throw new Error("Could not initialize webgl2 context! Does your browser support webgl2?");
     enableGlExts(gl);
 
-    const root = ".";
     const fragShader = await getFile(root + "/compute.frag.c");
     const programInfo = twgl.createProgramInfo(gl, [vs, fragShader]);
 
