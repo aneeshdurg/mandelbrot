@@ -12,7 +12,10 @@ precision mediump int;
 uniform float u_width;
 uniform float u_height;
 uniform int u_render;
+uniform vec2 u_domain;
+uniform vec2 u_range;
 uniform sampler2D u_texture;
+uniform bool u_reset;
 
 out vec4 color_out;
 
@@ -34,7 +37,7 @@ void main() {
 
         // All of this hsl color stuff is pretty arbitrary and constants were
         // chose for pretty colors
-        float X = 100.0;
+        float X = 10000.0;
         float n = min(X, value.b);
         float ratio = n / X;
         float log_ratio = log(0.5 * n) / log(X);
@@ -73,14 +76,20 @@ void main() {
         return;
     }
 
-    // scale coords to [-2, 2]x[-2, 2]
-    float c_real = 4.0 * (float(gl_FragCoord.x) / u_width) - 2.0;
-    float c_imag = 4.0 * (float(gl_FragCoord.y) / u_height) - 2.0;
+    // scale coords to domain x range
+    float x_span = u_domain.y - u_domain.x;
+    float x_offset = u_domain.x;
+    float c_real = x_span * (float(gl_FragCoord.x) / u_width) + x_offset;
+    float y_span = u_range.y - u_range.x;
+    float y_offset = u_range.x;
+    float c_imag = y_span * (float(gl_FragCoord.y) / u_height) + y_offset;
 
     float z_real = 0.0;
     float z_imag = 0.0;
 
     vec4 value = texelFetch(u_texture, ivec2(gl_FragCoord.xy), 0);
+    if (u_reset)
+        value = vec4(0.0, 0.0, 0.0, 0.0);
     z_real = value.r;
     z_imag = value.g;
 

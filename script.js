@@ -129,6 +129,64 @@ async function main(canvas, root, fps) {
     const computeDsts = [createTexture(gl, dimensions, null), createTexture(gl, dimensions, null)];
     const fb = gl.createFramebuffer();
 
+    const domain = new Float32Array([-2, 2]);
+    const range = new Float32Array([-2, 2]);
+
+    let reset = false;
+
+    function x_span() {
+        return domain[1] - domain[0];
+    }
+
+    function y_span() {
+        return range[1] - range[0];
+    }
+
+    // Zoom in by 0.75x
+    function zoom(center, zoom_factor) {
+        if (center[0] < domain[0] || center[0] > domain[1] ||
+                center[1] < range[0] || center[1] > range[1]) {
+            console.log("?!?!", center, domain, range);
+            console.log(center[0] < domain[0]);
+            console.log(center[0] > domain[1]);
+            console.log(center[1] < range[0]);
+            console.log(center[1] > range[1]);
+            return;
+        }
+
+        const curr_width = x_span();
+        const final_width = curr_width * zoom_factor;
+        console.log(curr_width, "->", final_width);
+        domain[0] = center[0] - (final_width / 2);
+        domain[1] = center[0] + (final_width / 2);
+
+        const curr_height = y_span();
+        const final_height = curr_height * zoom_factor;
+        console.log(curr_height, "->", final_height);
+        range[0] = center[0] - (final_height / 2);
+        range[1] = center[0] + (final_height / 2);
+
+        console.log(center, domain, range);
+
+        reset = true;
+    }
+
+    canvas.addEventListener("mousedown", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mousePos =  [
+          (e.clientX - rect.left) / rect.width,
+          (canvas.height - (e.clientY - rect.top)) / rect.height, // flip y-axis for gl coords
+        ];
+
+        console.log(mousePos);
+        mousePos[0] = x_span() * mousePos[0] + domain[0];
+        mousePos[1] = y_span() * mousePos[1] + range[0];
+        console.log(mousePos);
+        zoom(mousePos, e.buttons == 1 ? 0.5 : 2);
+    });
+
+    canvas.addEventListener("contextmenu", (e) => { e.preventDefault(); });
+
     let counter = 0;
     function src() {
         return computeDsts[counter];
@@ -146,7 +204,8 @@ async function main(canvas, root, fps) {
     let lastRender = 0;
     const mspf = 1000/fps;
 
-    let max_steps = 100;
+    const max_steps = 10000;
+    let steps = max_steps;
 
     function step(time) {
         if ((time - lastRender) < mspf) {
@@ -160,6 +219,9 @@ async function main(canvas, root, fps) {
             u_height: dimensions[1],
             u_render: 0,
             u_texture: src(),
+            u_domain: domain,
+            u_range: range,
+            u_reset: reset,
         });
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
@@ -168,6 +230,10 @@ async function main(canvas, root, fps) {
 
         render(gl);
         gl.finish();
+        if (reset) {
+            steps = max_steps;
+            reset = false;
+        }
 
         // Set up parameters for render
         twgl.setUniforms(programInfo, {
@@ -183,8 +249,8 @@ async function main(canvas, root, fps) {
 
         flipflop();
 
-        max_steps--;
-        if (max_steps) {
+        steps--;
+        if (steps) {
             lastRender = time;
             requestAnimationFrame(step);
         }
